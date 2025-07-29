@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">ShoppingList</string>
+    <string name="logo">A simple logo, that is representing a bag with a some stuff in it.</string>
+    <string name="input_label">Type the product name in here.</string>
+    <string name="save_button">Click here to add the product to the shopping list.</string>
+    <string name="delete_action_button">Click here to delete this product.</string>
 </resources>
