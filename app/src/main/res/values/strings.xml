@@ -4,4 +4,6 @@
     <string name="input_label">Type the product name in here.</string>
     <string name="save_button">Click here to add the product to the shopping list.</string>
     <string name="delete_action_button">Click here to delete this product.</string>
+    <string name="to_buy">Items to buy</string>
+    <string name="bought_items">Already bought items</string>
 </resources>
