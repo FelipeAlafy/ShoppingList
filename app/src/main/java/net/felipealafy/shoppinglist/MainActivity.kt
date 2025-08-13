@@ -28,11 +28,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -43,42 +42,40 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.StateFlow
 import net.felipealafy.shoppinglist.ui.theme.Coral
 import net.felipealafy.shoppinglist.ui.theme.Marine
 import net.felipealafy.shoppinglist.ui.theme.ShoppingListTheme
 import net.felipealafy.shoppinglist.ui.theme.Typography
 
 class MainActivity : ComponentActivity() {
+
+    val viewModel: ShoppingListViewModel = ShoppingListViewModel()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             ShoppingListTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    val itemsList = remember { mutableStateListOf<Item>() }
-                    val textInputContent = rememberSaveable { mutableStateOf("") }
-                    val handlerItem = remember {mutableStateOf(Item(
-                        description = "",
-                        id = 0
-                    ))}
+                    val itemsList by viewModel.itemList.collectAsState()
 
                     Column (
-                        Modifier.fillMaxSize().padding(innerPadding),
+                        Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
                         verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                         Logo()
 
-                        Input(textInputContent = textInputContent)
+                        Input(
+                            textInputContent = viewModel.textInputContent,
+                            onTextChanged = viewModel.onTextChanged
+                        )
                         SaveButton (
                             onClick= {
-                                handlerItem.value.name = textInputContent.value
-                                if (handlerItem.value.description.isEmpty()) {
-                                    handlerItem.value.getDescription()
-                                    handlerItem.value.id = itemsList.size + 1
-                                }
-                                itemsList.add(handlerItem.value)
-                                handlerItem.value = Item(description = "", id = 0)
+                                viewModel.addItem()
                             }
                         )
 
@@ -88,26 +85,14 @@ class MainActivity : ComponentActivity() {
                                 if (itemData.bought) return@items
                                 ItemComponent(
                                     itemData = itemData,
-                                    onCheck = { checkStatus ->
-                                        itemData.bought = checkStatus
+                                    onCheck = {
+                                        viewModel.onCheck(item = itemData)
                                     },
                                     onDeleteButtonClicked = {
-                                        itemsList.removeIf { it ->
-                                            itemData.id == it.id
-                                        }
+                                        viewModel.removeItem(item = itemData)
                                     },
                                     onEditModeButtonClicked = {
-                                        textInputContent.value = itemData.name
-                                        handlerItem.value = Item(
-                                            description = itemData.description,
-                                            id = itemData.id
-                                        ).apply {
-                                            bought = itemData.bought
-                                            name = itemData.name
-                                        }
-                                        itemsList.removeIf { it ->
-                                            itemData.id == it.id
-                                        }
+                                        viewModel.editItem(oldItem = itemData)
                                     }
                                 )
                             }
@@ -118,26 +103,14 @@ class MainActivity : ComponentActivity() {
                                 if (!itemData.bought) return@items
                                 ItemComponent(
                                     itemData = itemData,
-                                    onCheck = { checkStatus ->
-                                        itemData.bought = checkStatus
+                                    onCheck = {
+                                        viewModel.onCheck(item = itemData)
                                     },
                                     onDeleteButtonClicked = {
-                                        itemsList.removeIf {
-                                            it.id == itemData.id
-                                        }
+                                        viewModel.removeItem(item = itemData)
                                     },
                                     onEditModeButtonClicked = {
-                                        textInputContent.value = itemData.name
-                                        handlerItem.value = Item(
-                                            description = itemData.description,
-                                            id = itemData.id
-                                        ).apply {
-                                            bought = itemData.bought
-                                            name = itemData.name
-                                        }
-                                        itemsList.removeIf {
-                                            it.id == itemData.id
-                                        }
+                                        viewModel.editItem(oldItem = itemData)
                                     }
                                 )
                             }
@@ -159,13 +132,12 @@ fun Logo() {
 }
 
 @Composable
-fun Input(textInputContent: MutableState<String>) {
+fun Input(textInputContent: StateFlow<String>, onTextChanged: (String) -> Unit) {
+    val text by textInputContent.collectAsState()
     OutlinedTextField(
         modifier = Modifier.padding(top = 16.dp, bottom = 16.dp),
-        value = textInputContent.value,
-        onValueChange = {
-            textInputContent.value = it
-        },
+        value = text,
+        onValueChange = onTextChanged,
         textStyle = Typography.bodyLarge,
         shape = RoundedCornerShape(20.dp)
     )
@@ -289,7 +261,7 @@ fun Title(@StringRes text: Int) {
                 )
 
                 drawLine(
-                    color= Coral,
+                    color = Coral,
                     start = Offset(0f, size.height),
                     end = Offset(endMutiplyFactor, size.height),
                     strokeWidth = strokeWidth,
