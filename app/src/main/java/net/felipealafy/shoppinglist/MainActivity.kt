@@ -58,9 +58,8 @@ class MainActivity : ComponentActivity() {
                     val itemsList = remember { mutableStateListOf<Item>() }
                     val textInputContent = rememberSaveable { mutableStateOf("") }
                     val handlerItem = remember {mutableStateOf(Item(
-                        name = "",
                         description = "",
-                        bought = false
+                        id = 0
                     ))}
 
                     Column (
@@ -76,8 +75,10 @@ class MainActivity : ComponentActivity() {
                                 handlerItem.value.name = textInputContent.value
                                 if (handlerItem.value.description.isEmpty()) {
                                     handlerItem.value.getDescription()
+                                    handlerItem.value.id = itemsList.size + 1
                                 }
                                 itemsList.add(handlerItem.value)
+                                handlerItem.value = Item(description = "", id = 0)
                             }
                         )
 
@@ -91,16 +92,22 @@ class MainActivity : ComponentActivity() {
                                         itemData.bought = checkStatus
                                     },
                                     onDeleteButtonClicked = {
-                                        itemsList.remove(itemData)
+                                        itemsList.removeIf { it ->
+                                            itemData.id == it.id
+                                        }
                                     },
                                     onEditModeButtonClicked = {
                                         textInputContent.value = itemData.name
-                                        handlerItem.value.copy(
-                                            itemData.name,
-                                            itemData.description,
-                                            itemData.bought
-                                        )
-                                        itemsList.remove(itemData)
+                                        handlerItem.value = Item(
+                                            description = itemData.description,
+                                            id = itemData.id
+                                        ).apply {
+                                            bought = itemData.bought
+                                            name = itemData.name
+                                        }
+                                        itemsList.removeIf { it ->
+                                            itemData.id == it.id
+                                        }
                                     }
                                 )
                             }
@@ -115,16 +122,22 @@ class MainActivity : ComponentActivity() {
                                         itemData.bought = checkStatus
                                     },
                                     onDeleteButtonClicked = {
-                                        itemsList.remove(itemData)
+                                        itemsList.removeIf {
+                                            it.id == itemData.id
+                                        }
                                     },
                                     onEditModeButtonClicked = {
                                         textInputContent.value = itemData.name
-                                        handlerItem.value.copy(
-                                            itemData.name,
-                                            itemData.description,
-                                            itemData.bought
-                                        )
-                                        itemsList.remove(itemData)
+                                        handlerItem.value = Item(
+                                            description = itemData.description,
+                                            id = itemData.id
+                                        ).apply {
+                                            bought = itemData.bought
+                                            name = itemData.name
+                                        }
+                                        itemsList.removeIf {
+                                            it.id == itemData.id
+                                        }
                                     }
                                 )
                             }
@@ -197,7 +210,7 @@ fun ActionButtonEdit(modifier: Modifier = Modifier, onClick: () -> Unit) {
     ) {
         Icon(
             Icons.Filled.Edit,
-            contentDescription = stringResource(R.string.delete_action_button),
+            contentDescription = stringResource(R.string.edit_action_button),
             tint = Marine
         )
     }
@@ -252,8 +265,8 @@ fun ItemComponent(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ActionButtonDelete(onClick = onEditModeButtonClicked)
-            ActionButtonEdit(onClick = onDeleteButtonClicked)
+            ActionButtonDelete(onClick = onDeleteButtonClicked)
+            ActionButtonEdit(onClick = onEditModeButtonClicked)
         }
     }
 }

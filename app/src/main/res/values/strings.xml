@@ -6,4 +6,5 @@
     <string name="delete_action_button">Click here to delete this product.</string>
     <string name="to_buy">Items to buy</string>
     <string name="bought_items">Already bought items</string>
+    <string name="edit_action_button">Click here to edit this item.</string>
 </resources>
