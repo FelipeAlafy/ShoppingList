@@ -6,9 +6,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -22,16 +28,23 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import net.felipealafy.shoppinglist.ui.theme.Coral
+import net.felipealafy.shoppinglist.ui.theme.Marine
 import net.felipealafy.shoppinglist.ui.theme.ShoppingListTheme
 import net.felipealafy.shoppinglist.ui.theme.Typography
 
@@ -42,8 +55,93 @@ class MainActivity : ComponentActivity() {
         setContent {
             ShoppingListTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Column (Modifier.padding(innerPadding)) {
-                        ItemCheckbox()
+                    val itemsList = remember { mutableStateListOf<Item>() }
+                    val textInputContent = rememberSaveable { mutableStateOf("") }
+                    val handlerItem = remember {mutableStateOf(Item(
+                        description = "",
+                        id = 0
+                    ))}
+
+                    Column (
+                        Modifier.fillMaxSize().padding(innerPadding),
+                        verticalArrangement = Arrangement.Top,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                        Logo()
+
+                        Input(textInputContent = textInputContent)
+                        SaveButton (
+                            onClick= {
+                                handlerItem.value.name = textInputContent.value
+                                if (handlerItem.value.description.isEmpty()) {
+                                    handlerItem.value.getDescription()
+                                    handlerItem.value.id = itemsList.size + 1
+                                }
+                                itemsList.add(handlerItem.value)
+                                handlerItem.value = Item(description = "", id = 0)
+                            }
+                        )
+
+                        Title(text = R.string.to_buy)
+                        LazyColumn {
+                            items(itemsList) { itemData ->
+                                if (itemData.bought) return@items
+                                ItemComponent(
+                                    itemData = itemData,
+                                    onCheck = { checkStatus ->
+                                        itemData.bought = checkStatus
+                                    },
+                                    onDeleteButtonClicked = {
+                                        itemsList.removeIf { it ->
+                                            itemData.id == it.id
+                                        }
+                                    },
+                                    onEditModeButtonClicked = {
+                                        textInputContent.value = itemData.name
+                                        handlerItem.value = Item(
+                                            description = itemData.description,
+                                            id = itemData.id
+                                        ).apply {
+                                            bought = itemData.bought
+                                            name = itemData.name
+                                        }
+                                        itemsList.removeIf { it ->
+                                            itemData.id == it.id
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        Title(text = R.string.bought_items)
+                        LazyColumn {
+                            items(itemsList) { itemData ->
+                                if (!itemData.bought) return@items
+                                ItemComponent(
+                                    itemData = itemData,
+                                    onCheck = { checkStatus ->
+                                        itemData.bought = checkStatus
+                                    },
+                                    onDeleteButtonClicked = {
+                                        itemsList.removeIf {
+                                            it.id == itemData.id
+                                        }
+                                    },
+                                    onEditModeButtonClicked = {
+                                        textInputContent.value = itemData.name
+                                        handlerItem.value = Item(
+                                            description = itemData.description,
+                                            id = itemData.id
+                                        ).apply {
+                                            bought = itemData.bought
+                                            name = itemData.name
+                                        }
+                                        itemsList.removeIf {
+                                            it.id == itemData.id
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -52,20 +150,21 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Logo(modifier: Modifier = Modifier) {
+fun Logo() {
     Image(
+        modifier = Modifier.size(160.dp, 160.dp),
         painter = painterResource(R.drawable.logo),
         contentDescription = stringResource(R.string.logo)
     )
 }
 
 @Composable
-fun Input(modifier: Modifier = Modifier) {
-    var text by remember { mutableStateOf("") }
+fun Input(textInputContent: MutableState<String>) {
     OutlinedTextField(
-        value = text,
+        modifier = Modifier.padding(top = 16.dp, bottom = 16.dp),
+        value = textInputContent.value,
         onValueChange = {
-            text = it
+            textInputContent.value = it
         },
         textStyle = Typography.bodyLarge,
         shape = RoundedCornerShape(20.dp)
@@ -73,8 +172,9 @@ fun Input(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun SaveButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun SaveButton(onClick: () -> Unit) {
     Button(
+        modifier = Modifier.padding(bottom = 32.dp),
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         colors = ButtonColors(
@@ -89,28 +189,39 @@ fun SaveButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-fun ActionButton(modifier: Modifier = Modifier, onClick: () -> Unit, deleteMode: Boolean) {
+fun ActionButtonDelete(modifier: Modifier = Modifier, onClick: () -> Unit) {
     IconButton(
         modifier = modifier,
         onClick = onClick,
     ) {
-        if (deleteMode) {
-            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.delete_action_button))
-        } else {
-            Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.delete_action_button))
-        }
+        Icon(
+            imageVector = Icons.Filled.Delete,
+            contentDescription = stringResource(R.string.delete_action_button),
+            tint = Marine
+        )
     }
 }
 
 @Composable
-fun ItemCheckbox(modifier: Modifier = Modifier, checkInitial: Boolean = false) {
-    var check by remember { mutableStateOf(checkInitial) }
+fun ActionButtonEdit(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    IconButton(
+        modifier = modifier,
+        onClick = onClick,
+    ) {
+        Icon(
+            Icons.Filled.Edit,
+            contentDescription = stringResource(R.string.edit_action_button),
+            tint = Marine
+        )
+    }
+}
+
+@Composable
+fun ItemCheckbox(modifier: Modifier = Modifier, itemData: Item, onCheck: (Boolean) -> Unit) {
     Checkbox(
         modifier = modifier,
-        checked = check,
-        onCheckedChange = {
-            check = it
-        }
+        checked = itemData.bought,
+        onCheckedChange = onCheck
     )
 }
 
@@ -119,7 +230,7 @@ fun ItemName(modifier: Modifier = Modifier, item: Item) {
     Text(
         modifier = modifier,
         text= item.name,
-        style = Typography.displayLarge
+        style = Typography.bodyLarge
     )
 }
 
@@ -133,9 +244,59 @@ fun ItemDescription(modifier: Modifier = Modifier, item: Item) {
 }
 
 @Composable
-fun Title(modifier: Modifier = Modifier, @StringRes text: Int) {
+fun ItemComponent(
+    modifier: Modifier = Modifier, itemData: Item,
+    onCheck: (Boolean) -> Unit,
+    onEditModeButtonClicked: () -> Unit,
+    onDeleteButtonClicked: () -> Unit
+    ) {
+    Row(
+        modifier.fillMaxWidth(),
+         horizontalArrangement = Arrangement.Start,
+         verticalAlignment = Alignment.CenterVertically
+    ) {
+        ItemCheckbox(itemData = itemData, onCheck = onCheck)
+        Column {
+            ItemName(item = itemData)
+            ItemDescription(item = itemData)
+        }
+        Row (
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ActionButtonDelete(onClick = onDeleteButtonClicked)
+            ActionButtonEdit(onClick = onEditModeButtonClicked)
+        }
+    }
+}
+
+@Composable
+fun Title(@StringRes text: Int) {
+    val endMutiplyFactor: Float  = stringResource(text).length.toFloat() * 42f
     Text(
-        modifier = modifier,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
+            .drawBehind {
+                val strokeWidth = 2.dp.toPx()
+                val dashWidth = 6.dp.toPx()
+                val dashGap = 4.dp.toPx()
+
+
+                val pathEffect = PathEffect.dashPathEffect(
+                    floatArrayOf(dashWidth, dashGap), 0f
+                )
+
+                drawLine(
+                    color= Coral,
+                    start = Offset(0f, size.height),
+                    end = Offset(endMutiplyFactor, size.height),
+                    strokeWidth = strokeWidth,
+                    pathEffect = pathEffect
+                )
+            },
+        textAlign = TextAlign.Start,
         text = stringResource(text),
         style = Typography.headlineLarge
     )

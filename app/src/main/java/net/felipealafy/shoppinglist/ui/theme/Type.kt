@@ -42,6 +42,6 @@ val Typography = Typography(
         color = Marine,
         fontSize = 12.sp,
         lineHeight = 20.sp,
-        letterSpacing = 20.sp
+        letterSpacing = 1.sp
     )
 )
