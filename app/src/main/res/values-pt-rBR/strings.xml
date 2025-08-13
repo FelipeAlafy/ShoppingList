@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Listas de compras</string>
+    <string name="logo">Uma logo, que representa uma sacola com itens de supermercado</string>
+    <string name="input_label">Digite o nome do produto aqui</string>
+    <string name="save_button">Clique para salvar o produto</string>
+    <string name="delete_action_button">Clique para excluir o produto da lista</string>
+    <string name="to_buy">Itens para serem comprados</string>
+    <string name="bought_items">Itens que já foram comprados</string>
+    <string name="edit_action_button">Clique aqui para editar esse item</string>
+</resources>
